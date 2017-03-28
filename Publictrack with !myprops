@@ -1,0 +1,101 @@
+// ==UserScript==
+// @name         [Dubtrack] PublicTrack
+// @namespace    Chr0nX/Dubtrack
+// @version      0.4
+// @description  Commands Helper for NB3's Dubtrack room
+// @author       Chr0nX
+// @match        https://www.dubtrack.fm/join/nightblue3
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    window.Modtrack = (function (Dubtrack) {
+        var self = {};
+
+        var menuElements = {
+            commands: {
+                label: 'Commands',
+                elements: {
+                    props: {
+                        type: 'command',
+                        label: '!props',
+                        handler: chatMessage,
+                        arguments: ['!props', true, true]
+                    },
+                    history: {
+                        type: 'command',
+                        label: '!history (with ID)',
+                        handler: safeHistoryCheck,
+                        arguments: null
+                    },
+                    myprops: {
+                        type: 'command',
+                        label: '!myprops',
+                        handler: chatMessage,
+                        arguments: ['!myprops', true, true]
+                }
+            }
+        }
+
+        }; function chatMessage (message, send, clear) {
+            var element = $('#chat-txt-message');
+            element.val((clear === true ? '' : element.val()) + message);
+            if (send === true) {
+                $('.pusher-chat-widget-send-btn').click();
+            }
+            element.focus();
+        }
+
+        function safeHistoryCheck () {
+            var songInfo = Dubtrack.room.player.activeSong.get('songInfo');
+            chatMessage('!history ' + songInfo.fkid + ' *(this song)*', true, true);
+        }
+
+        self.executeCommand = function (groupIndex, elementIndex) {
+            var command = menuElements[groupIndex].elements[elementIndex];
+            command.handler.apply(self, command.arguments);
+        };
+
+        var UI = (function (parent) {
+            var self = {};
+
+            function buildUI () {
+                var container = $('<div class="modtrack-container"><h2>Publictrack</h2></div>');
+                var menuContainer = $('<div class="menu-container"></div>').appendTo(container);
+                for (var groupIndex in menuElements) {
+                    var elementGroup = menuElements[groupIndex];
+                    menuContainer.append('<h3>' + elementGroup.label + '</h3>');
+                    for (var elementIndex in elementGroup.elements) {
+                        var element = elementGroup.elements[elementIndex];
+                        if (element.type == 'command') {
+                            menuContainer.append('<button type="button" onclick="Modtrack.executeCommand(\'' + groupIndex + '\', \'' + elementIndex + '\')">' + element.label + '</button>');
+                        } else if (element.type == 'setting') {
+                            menuContainer.append('<button type="button" onclick="" disabled><i class="fi-' + (element.var === true ? 'check' : 'x') + '"></i> ' + element.label + '</button>');
+                        }
+                    }
+                }
+                menuContainer.perfectScrollbar();
+                return container;
+            }
+
+            self.init = function () {
+                $('head').append('<link rel="stylesheet" type="text/css" href="https://cdn.rawgit.com/Chr0nX/Modtrack/v0.3-fixed/modtrack.css" />');
+                buildUI().appendTo('#main-room .right_section');
+            };
+
+            self.showSystemMessage = function (message) {
+                $('.chat-main').append('<li class="system"><span>' + message + '</span></li>');
+            };
+
+            return self;
+        })(self);
+
+        (function init () {
+            $(document).ready(UI.init);
+        })();
+
+        return self;
+    })(Dubtrack);
+})();
